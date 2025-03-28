@@ -42,7 +42,7 @@ class WebScraper:
             return 'timeout', ''
 
     def write_to_csv(self, link_text, status, url, link_kind, option=''):
-        with codecs.open(self.fname, 'a', encoding='cp932', errors='ignore') as f:
+        with codecs.open(self.fname, 'a', encoding='utf-8-sig', errors='ignore') as f:
             f.write(f"{link_text},{status},{url},{link_kind}{option}\n")
 
     def process_page(self, res):
