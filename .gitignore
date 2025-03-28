@@ -1,3 +1,5 @@
 .qodo
 
 **/logs
+
+__pycache__/
