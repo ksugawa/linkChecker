@@ -16,7 +16,7 @@ class WebScraper:
         pass
 
     def extract_title(self, res):
-        soup = BeautifulSoup(res.text, 'html.parser')
+        soup = BeautifulSoup(res.content, 'html.parser')
         title = soup.find('title')
         if title and title.string:
             return title.string.strip()
@@ -28,7 +28,8 @@ class WebScraper:
             url = link.get('href')
             if url is None or url == '#':
                 continue
-            link_text = link.string.replace(',', ' ') if link.string else ''
+            link_text = str(link.string).replace(',', ' ') if link.string else ''
+            print("リンクテキスト:", link_text)
             url = urljoin(self.basic_url, url)  # base_urlをbasic_urlに変更
             links.append((url, link_text))
         return links
@@ -53,7 +54,7 @@ class WebScraper:
     def process_page(self, res):
         title_text = self.extract_title(res)
         print(title_text)
-        soup = BeautifulSoup(res.text, 'html.parser')
+        soup = BeautifulSoup(res.content, 'html.parser')
         links = self.get_links_from_page(soup)
 
         for url, link_text in links:
