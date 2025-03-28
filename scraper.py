@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+import os
 import codecs
 
 class WebScraper:
@@ -42,7 +43,11 @@ class WebScraper:
             return 'timeout', ''
 
     def write_to_csv(self, link_text, status, url, link_kind, option=''):
-        with codecs.open(self.fname, 'a', encoding='utf-8-sig', errors='ignore') as f:
+        logs_dir = os.path.join(os.getcwd(), "logs")
+        os.makedirs(logs_dir, exist_ok=True)
+        file_path = os.path.join(logs_dir, self.fname)
+
+        with codecs.open(file_path, 'a', encoding='utf-8-sig', errors='ignore') as f:
             f.write(f"{link_text},{status},{url},{link_kind}{option}\n")
 
     def process_page(self, res):
