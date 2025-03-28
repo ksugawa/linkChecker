@@ -3,7 +3,7 @@ from scraper import WebScraper
 import tkinter as tk
 
 class LinkCheckerApp:
-    def __init__(self, scraper):
+    def __init__(self, scraper: WebScraper):
         self.root = tk.Tk()
         self.root.title("リンク切れ検出アプリ")
         self.root.geometry("500x280")
@@ -42,6 +42,7 @@ class LinkCheckerApp:
         
         self.result_text.delete(1.0, tk.END)
         self.result_text.insert(tk.END, "リンクをチェック中...\n")
+        self.result_text.update_idletasks()
 
         # WebScraper に basic_url を渡す
         self.scraper.basic_url = url
