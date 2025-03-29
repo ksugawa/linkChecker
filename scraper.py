@@ -3,16 +3,17 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import os
 import codecs
+import datetime
 
 class WebScraper:
-    def __init__(self, login_info, fname, progress_callback=None):
+    def __init__(self, login_info, progress_callback=None):
         self.session = requests.Session()
         self.login_info = login_info
-        self.fname = fname
+        self.fname = ""           # ログ用CSV
         self.h_files = set()      # 調査済URL リスト
         self.page_link = set()    # 探索対象URL リスト
         self.checked_link = set() # 探索済URL リスト
-        self.basic_url = ""  # 入力されたURLを保存
+        self.basic_url = ""       # 入力されたURL
         self.progress_callback = progress_callback
 
 
@@ -33,9 +34,9 @@ class WebScraper:
             url = link.get('href')
             if url is None or url == '#':
                 continue
-            link_text = str(link.string).replace(',', ' ') if link.string else ''
+            link_text = str(link.string).replace(',', ' ') if link.string else 'リンクテキストなし'
             print("リンクテキスト:", link_text)
-            url = urljoin(self.basic_url, url)  # base_urlをbasic_urlに変更
+            url = urljoin(self.basic_url, url)
             links.append((url, link_text))
         return links
 
@@ -49,8 +50,11 @@ class WebScraper:
         except requests.exceptions.RequestException:
             return 'timeout', ''
 
-    def write_to_csv(self, link_text, status, url, link_kind, option=''):
+    def write_to_csv(self, title_text, link_text, status, url, link_kind, option=''):
         # ログをcsvに出力
+        now = datetime.datetime.now()  # 時間まで
+
+        self.fname = 'linkCheckLog_' + title_text + '_' + now.strftime('%Y%m%d%H%M%S') + '.csv'
         logs_dir = os.path.join(os.getcwd(), "logs")
         os.makedirs(logs_dir, exist_ok=True)
         file_path = os.path.join(logs_dir, self.fname)
@@ -66,6 +70,7 @@ class WebScraper:
         links = self.get_links_from_page(soup)
 
         total_links = len(links)
+
         for index, (url, link_text) in enumerate(links, start=1):
             if not app.running:
                 print("キャンセルが押されたため中断")
@@ -73,7 +78,7 @@ class WebScraper:
             
             link_kind = '内部リンク' if url.startswith(self.basic_url) else '外部リンク'
             status, option = self.check_url(url)
-            self.write_to_csv(link_text, status, url, link_kind, option)
+            self.write_to_csv(title_text, link_text, status, url, link_kind, option)
 
             # 進捗を更新
             if self.progress_callback:
@@ -89,5 +94,5 @@ class WebScraper:
         if self.progress_callback:
             self.progress_callback(0, 1)
 
-        broken_links = self.process_page(res, app)
-        return broken_links
+        all_links = self.process_page(res, app)
+        return all_links

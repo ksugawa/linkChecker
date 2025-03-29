@@ -20,12 +20,12 @@ class LinkCheckerApp:
         self.label.grid(row=0, column=0, columnspan=2, padx=(0, 5), pady=(5, 0), sticky="w")
 
         # テキストボックス
-        self.txtBox = tk.Entry(self.frame, width=40)
+        self.txtBox = tk.Entry(self.frame, width=40, font=("Helvetica", 11))
         self.txtBox.grid(row=1, column=0, padx=(0, 5), pady=0, sticky="ew")
 
         # 実行ボタン
         self.button = tk.Button(self.frame, text="実行", command=self.start_check)
-        self.button.grid(row=1, column=1, padx=5, pady=0)
+        self.button.grid(row=1, column=1, padx=5, pady=0, sticky="ew")
 
         # 進捗情報ラベル
         self.progress_label = tk.Label(self.frame, text="0 / 0 ページチェック済み", font=("Helvetica", 9))
@@ -37,7 +37,7 @@ class LinkCheckerApp:
 
         # キャンセルボタン
         self.button_cancel = tk.Button(self.frame, text="キャンセル", command=self.cancel_check)
-        self.button_cancel.grid(row=3, column=1, padx=5, pady=0)
+        self.button_cancel.grid(row=3, column=1, padx=5, pady=0, sticky="ew")
 
         # scraper インスタンスを保存
         self.scraper = scraper
@@ -72,12 +72,13 @@ class LinkCheckerApp:
         
     def run_check(self, url):
         # スクレイピング実行
-        broken_links = self.scraper.check_links(url, self)
+        all_links = self.scraper.check_links(url, self)
 
         if self.running:
+            broken_links = [link for link, status in all_links if status in ('404', 'timeout')]
+
             if broken_links:
-                result = "\n".join(broken_links)
-                messagebox.showerror("エラー", f"リンク切れ検出:\n{result}\n")
+                messagebox.showerror("エラー", f"リンク切れ検出: {len(broken_links)} 件")
             else:
                 messagebox.showinfo('完了', 'リンク切れはありません')
         
