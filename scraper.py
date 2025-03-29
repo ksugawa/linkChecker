@@ -52,9 +52,7 @@ class WebScraper:
 
     def write_to_csv(self, title_text, link_text, status, url, link_kind, option=''):
         # ログをcsvに出力
-        now = datetime.datetime.now()  # 時間まで
-
-        self.fname = 'linkCheckLog_' + title_text + '_' + now.strftime('%Y%m%d%H%M%S') + '.csv'
+        self.fname = 'linkCheckLog_' + title_text + '.csv'
         logs_dir = os.path.join(os.getcwd(), "logs")
         os.makedirs(logs_dir, exist_ok=True)
         file_path = os.path.join(logs_dir, self.fname)
