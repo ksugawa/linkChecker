@@ -28,7 +28,7 @@ class LinkCheckerApp:
         self.button.grid(row=1, column=1, padx=5, pady=0, sticky="ew")
 
         # 進捗情報ラベル
-        self.progress_label = tk.Label(self.frame, text="0 / 0 ページチェック済み", font=("Helvetica", 9))
+        self.progress_label = tk.Label(self.frame, text="0 / 0 チェック済み", font=("Helvetica", 9))
         self.progress_label.grid(row=2, column=0, padx=(0, 5), pady=(10, 0), sticky="w")
 
         # プログレスバー

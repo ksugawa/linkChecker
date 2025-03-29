@@ -1,15 +1,12 @@
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-import os
-import codecs
-import datetime
+from log import SaveLog
 
 class WebScraper:
     def __init__(self, login_info, progress_callback=None):
         self.session = requests.Session()
         self.login_info = login_info
-        self.fname = ""           # ログ用CSV
         self.h_files = set()      # 調査済URL リスト
         self.page_link = set()    # 探索対象URL リスト
         self.checked_link = set() # 探索済URL リスト
@@ -22,52 +19,56 @@ class WebScraper:
         pass
 
     def extract_title(self, res):
+        # ページタイトルを取得
         soup = BeautifulSoup(res.content, 'html.parser')
         title = soup.find('title')
-        if title and title.string:
-            return title.string.strip()
-        return ''
+        return title.string.strip() if title and title.string else ''
 
     def get_links_from_page(self, soup):
+        # ページ内のリンクを取得し、探索対象URLリストに追加
         links = []
         for link in soup.find_all('a', href=True):
             url = link.get('href')
             if url is None or url == '#':
                 continue
-            link_text = str(link.string).replace(',', ' ') if link.string else 'リンクテキストなし'
-            print("リンクテキスト:", link_text)
+
             url = urljoin(self.basic_url, url)
+            link_text = link.get_text(strip=True).replace(',', ' ') if link.get_text(strip=True) else 'リンクテキストなし'
+            print("リンクテキスト:", link_text)
+
+            # 重複防止
+            if url in self.h_files or url in self.page_link or url in self.checked_link:
+                continue
+
             links.append((url, link_text))
+            self.page_link.add(url)
         return links
 
     def check_url(self, url):
         # ステータスコードを取得
+        if url in self.checked_link:
+            return 'skipped', ''
+        
         try:
             res = self.session.get(url, timeout=(5.0, 7.5))
+            self.checked_link.add(url)
+
             if 'docs.google.com' in url or 'drive.google.com' in url:
                 return '403', 'googleDrive'
             return str(res.status_code), ''
         except requests.exceptions.RequestException:
             return 'timeout', ''
 
-    def write_to_csv(self, title_text, link_text, status, url, link_kind, option=''):
-        # ログをcsvに出力
-        self.fname = 'linkCheckLog_' + title_text + '.csv'
-        logs_dir = os.path.join(os.getcwd(), "logs")
-        os.makedirs(logs_dir, exist_ok=True)
-        file_path = os.path.join(logs_dir, self.fname)
-
-        with codecs.open(file_path, 'a', encoding='utf-8-sig', errors='ignore') as f:
-            f.write(f"{link_text},{status},{url},{link_kind}{option}\n")
-
     def process_page(self, res, app):
         # ページ内のリンクを処理
-        title_text = self.extract_title(res)
-        print("ページタイトル: ", title_text)
         soup = BeautifulSoup(res.content, 'html.parser')
         links = self.get_links_from_page(soup)
+        
+        title_text = self.extract_title(res)
+        print("ページタイトル: ", title_text)
 
         total_links = len(links)
+        all_links_info = []
 
         for index, (url, link_text) in enumerate(links, start=1):
             if not app.running:
@@ -76,21 +77,23 @@ class WebScraper:
             
             link_kind = '内部リンク' if url.startswith(self.basic_url) else '外部リンク'
             status, option = self.check_url(url)
-            self.write_to_csv(title_text, link_text, status, url, link_kind, option)
+
+            if status != 'skipped':
+                all_links_info.append((link_text, status, url, link_kind, option))
 
             # 進捗を更新
             if self.progress_callback:
                 self.progress_callback(index, total_links)
 
+        SaveLog(title_text, all_links_info).write_to_xlsx()
         return links
 
     def check_links(self, url, app):
-        # リンクチェックのメイン処理
-        self.basic_url = url  # 受け取ったURLをbasic_urlにセット
-        res = self.session.get(self.basic_url)  # basic_urlを使ってリクエストを送信
+        # メイン処理
+        self.basic_url = url
+        res = self.session.get(self.basic_url)
 
         if self.progress_callback:
             self.progress_callback(0, 1)
 
-        all_links = self.process_page(res, app)
-        return all_links
+        return self.process_page(res, app)
