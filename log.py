@@ -23,7 +23,7 @@ class SaveLog:
 
             wb = Workbook()
             ws = wb.active
-            ws.append(["リンクテキスト", "ステータス", "URL", "リンク種別"])
+            ws.append(["URL", "リンクテキスト", "リンク種別", "オプション", "ステータス"])
 
             for log in self.log_data:
                 ws.append(log)

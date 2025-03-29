@@ -79,7 +79,7 @@ class WebScraper:
             status, option = self.check_url(url)
 
             if status != 'skipped':
-                all_links_info.append((link_text, status, url, link_kind, option))
+                all_links_info.append((url, link_text, link_kind, option, status))
 
             # 進捗を更新
             if self.progress_callback:
