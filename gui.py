@@ -1,60 +1,92 @@
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 from scraper import WebScraper
 import tkinter as tk
+import threading
 
 class LinkCheckerApp:
     def __init__(self, scraper: WebScraper):
         self.root = tk.Tk()
         self.root.title("リンク切れ検出アプリ")
-        self.root.geometry("500x280")
+        self.root.geometry("500x150")
         self.root.columnconfigure(0, weight=1)
 
-        # URL入力欄
-        self.label = tk.Label(self.root, text="チェックするURLを入力してください。")
-        self.label.grid(row=0, column=0, columnspan=2, padx=10, pady=(10, 0), sticky="w")
-
-        # フレームでテキストボックスと実行ボタンをまとめる
+        # フレームでテキストボックス、ボタン、プログレスバーをまとめる
         self.frame = tk.Frame(self.root)
         self.frame.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
         self.frame.columnconfigure(0, weight=1)
 
+        # URL入力欄
+        self.label = tk.Label(self.frame, text="チェックするURLを入力してください。", font=("Helvetica", 9))
+        self.label.grid(row=0, column=0, columnspan=2, padx=(0, 5), pady=(5, 0), sticky="w")
+
         # テキストボックス
         self.txtBox = tk.Entry(self.frame, width=40)
-        self.txtBox.grid(row=0, column=0, padx=(0, 5), pady=0, sticky="ew")
+        self.txtBox.grid(row=1, column=0, padx=(0, 5), pady=0, sticky="ew")
 
         # 実行ボタン
-        self.button = tk.Button(self.frame, text="実行", command=self.get_link)
-        self.button.grid(row=0, column=1, padx=5, pady=0)
+        self.button = tk.Button(self.frame, text="実行", command=self.start_check)
+        self.button.grid(row=1, column=1, padx=5, pady=0)
 
-        # 進捗表示
-        self.result_text = tk.Text(self.root, height=10, width=60)
-        self.result_text.grid(row=2, column=0, padx=10, pady=5, sticky="ew")
+        # 進捗情報ラベル
+        self.progress_label = tk.Label(self.frame, text="0 / 0 ページチェック済み", font=("Helvetica", 9))
+        self.progress_label.grid(row=2, column=0, padx=(0, 5), pady=(10, 0), sticky="w")
+
+        # プログレスバー
+        self.progbar = ttk.Progressbar(self.frame, mode="determinate")
+        self.progbar.grid(row=3, column=0, padx=(0, 5), pady=5, sticky="ew")
+
+        # キャンセルボタン
+        self.button_cancel = tk.Button(self.frame, text="キャンセル", command=self.cancel_check)
+        self.button_cancel.grid(row=3, column=1, padx=5, pady=0)
 
         # scraper インスタンスを保存
-        self.scraper = scraper  # ここでscraperを受け取る
+        self.scraper = scraper
 
-    def get_link(self):
+        # 実行中フラグ
+        self.running = False
+
+    def update_progress(self, current, total):
+        # スクレイピング進捗をプログレスバーに反映
+        progress = int((current / total) * 100) if total > 0 else 0
+        self.progbar["value"] = progress
+        self.progress_label.config(text=f"{current} / {total} ページチェック済み")
+        self.root.update_idletasks()
+
+    def start_check(self):
+        # 実行ボタンが押された時の処理
         url = self.txtBox.get()
         print("入力されたリンク", url)
         if not url:
             messagebox.showerror("エラー", "URLを入力してください")
             return
         
-        self.result_text.delete(1.0, tk.END)
-        self.result_text.insert(tk.END, "リンクをチェック中...\n")
-        self.result_text.update_idletasks()
+        self.progbar["value"] = 0
+        self.running = True  # 実行フラフをセット
 
-        # WebScraper に basic_url を渡す
         self.scraper.basic_url = url
+        self.scraper.progress_callback = self.update_progress
 
-        # リンクチェック
-        broken_links = self.scraper.check_links(url)
+        # スクレイピング処理を別スレッドで実行
+        thread = threading.Thread(target=self.run_check, args=(url,))
+        thread.start()
+        
+    def run_check(self, url):
+        # スクレイピング実行
+        broken_links = self.scraper.check_links(url, self)
 
-        if broken_links:
-            result = "\n".join(broken_links)
-            self.result_text.insert(tk.END, f"リンク切れ検出:\n{result}\n")
-        else:
-            self.result_text.insert(tk.END, "リンク切れはありません\n")
+        if self.running:
+            if broken_links:
+                result = "\n".join(broken_links)
+                messagebox.showerror("エラー", f"リンク切れ検出:\n{result}\n")
+            else:
+                messagebox.showinfo('完了', 'リンク切れはありません')
+        
+        self.running = False # 処理が終了したらフラグをリセット
+
+    def cancel_check(self):
+        # キャンセルボタンが押された時の処理
+        self.running = False
+        messagebox.showinfo("キャンセル", "処理を中断しました。")
 
     def run(self):
         self.root.mainloop()
