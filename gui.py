@@ -75,7 +75,7 @@ class LinkCheckerApp:
         all_links = self.scraper.check_links(url, self)
 
         if self.running:
-            broken_links = [link for link, status in all_links if status in ('404', 'timeout')]
+            broken_links = [link for link, _, _, _, status in all_links if status in ('404', 'timeout')]
 
             if broken_links:
                 messagebox.showerror("エラー", f"リンク切れ検出: {len(broken_links)} 件")
